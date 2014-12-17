@@ -50,7 +50,8 @@ try:
     from IPython.html.widgets import DOMWidget
     from IPython.utils.traitlets import Unicode, Int
     from IPython.display import display, Javascript
-    from IPython.html.nbextensions import install_nbextension
+    from IPython.html.nbextensions import (install_nbextension,
+                                           check_nbextension)
 except Exception as exp:
     # raise ImportError("The WebGL backend requires IPython >= 2.0")
     available, testable, why_not, which = False, False, str(exp), None
@@ -59,11 +60,14 @@ else:
 
 
 # ------------------------------------------------------------- application ---
-def _prepare_js():
+def _prepare_js(force=False):
     pkgdir = op.dirname(__file__)
     jsdir = op.join(pkgdir, '../../html/static/js/')
-    install_nbextension([op.join(jsdir, 'vispy.min.js'),
-                         op.join(jsdir, 'jquery.mousewheel.min.js')])
+    vispyjs = [op.join(jsdir, 'vispy.min.js'),
+               op.join(jsdir, 'jquery.mousewheel.min.js')]
+
+    if force or not check_nbextension(vispyjs):
+        install_nbextension(vispyjs, overwrite=force)
 
     backend_path = op.join(jsdir, 'webgl-backend.js')
     with open(backend_path, 'r') as f:
@@ -99,6 +103,7 @@ class ApplicationBackend(BaseApplicationBackend):
 
 # ------------------------------------------------------------------ canvas ---
 class WebGLGlirParser(BaseGlirParser):
+
     def __init__(self, widget):
         self._widget = widget
 
@@ -114,6 +119,7 @@ class WebGLGlirParser(BaseGlirParser):
 
 class CanvasBackend(BaseCanvasBackend):
     # args are for BaseCanvasBackend, kwargs are for us.
+
     def __init__(self, *args, **kwargs):
         BaseCanvasBackend.__init__(self, *args)
         # Maybe to ensure that exactly all arguments are passed?
@@ -128,7 +134,7 @@ class CanvasBackend(BaseCanvasBackend):
             pass  # ok
         else:
             raise RuntimeError("WebGL doesn't yet support context sharing.")
-        
+
         self._create_widget(size=size)
 
     def _create_widget(self, size=None):
@@ -288,6 +294,7 @@ class CanvasBackend(BaseCanvasBackend):
 
 # ------------------------------------------------------------------- Timer ---
 class TimerBackend(BaseTimerBackend):
+
     def __init__(self, *args, **kwargs):
         super(TimerBackend, self).__init__(*args, **kwargs)
         self._timer = tornado.ioloop.PeriodicCallback(
